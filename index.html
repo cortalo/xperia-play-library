@@ -79,6 +79,13 @@ select { height: 36px; border-radius: 18px; border: 1px solid var(--line); backg
 .toggle[aria-pressed="true"] { border-color: var(--accent); color: var(--fg); }
 .toggle[aria-pressed="true"] .dot { background: var(--accent); }
 .toggle .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+#shuffle { color: var(--fg); }
+#shuffle svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.8; fill: none; }
+#shuffle svg circle { fill: currentColor; stroke: none; }
+#shuffle:hover { border-color: var(--accent); }
+#shuffle.spin svg { animation: roll .45s ease; }
+@keyframes roll { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { #shuffle.spin svg { animation: none; } }
 .genres { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .genres::-webkit-scrollbar { display: none; }
 .genres button { flex: none; border: 1px solid var(--line); background: transparent; border-radius: 14px; height: 28px; padding: 0 11px; cursor: pointer; color: var(--muted); font-size: 13px; }
@@ -204,7 +211,9 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
         <option value="name">按名称</option>
         <option value="year">按年份（新→旧）</option>
         <option value="size">按大小（小→大）</option>
+        <option value="random">随机顺序</option>
       </select>
+      <button type="button" class="toggle" id="shuffle" title="把当前筛选结果重新随机排一遍"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.4"/><circle cx="15.5" cy="15.5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="15.5" cy="8.5" r="1.4"/><circle cx="8.5" cy="15.5" r="1.4"/></svg>随机打乱</button>
       <select id="view" aria-label="浏览方式">
         <option value="scroll">无限滚动</option>
         <option value="pages">分页（每页 10 个）</option>
@@ -286,6 +295,8 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
     if (state.sort === 'name') return (a.e || a.t).localeCompare(b.e || b.t, 'zh');
     if (state.sort === 'year') return (b.y || 0) - (a.y || 0);
     if (state.sort === 'size') return (a.size || 0) - (b.size || 0);
+    // each game keeps its random key until the next shuffle, so cover chunks arriving later don't reorder the list
+    if (state.sort === 'random') return a.r - b.r;
     return (b.pick ? 2 : 0) + (covers[b.id] ? 1 : 0) - ((a.pick ? 2 : 0) + (covers[a.id] ? 1 : 0)) || a.o - b.o;
   }
   // keepPage: covers arriving in the background re-sort the list without sending the reader back to page 1
@@ -466,6 +477,14 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
   [['t-pick', 'pick'], ['t-commute', 'commute'], ['t-shot', 'shot']].forEach(function (p) {
     $(p[0]).addEventListener('click', function () { state[p[1]] = !state[p[1]]; this.setAttribute('aria-pressed', state[p[1]]); apply(); });
   });
+  function reshuffle() { games.forEach(function (g) { g.r = Math.random(); }); }
+  $('shuffle').addEventListener('click', function () {
+    var b = this;
+    reshuffle(); state.sort = 'random'; $('sort').value = 'random'; apply();
+    b.classList.remove('spin'); void b.offsetWidth; b.classList.add('spin');
+    var top = grid.getBoundingClientRect().top + window.scrollY - 12;
+    if (window.scrollY > top) window.scrollTo({ top: top, behavior: 'auto' });
+  });
   var qt; $('q').addEventListener('input', function () { var v = this.value; clearTimeout(qt); qt = setTimeout(function () { state.q = v.trim(); apply(); }, 120); });
 
   function fillControls() {
@@ -495,6 +514,7 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
     games = r[0]; manifest = r[1]; icons = r[2];
     var arr = function (x) { return Array.isArray(x) ? x : (x == null || (typeof x === 'object' && !Object.keys(x).length)) ? [] : [x]; };
     games.forEach(function (g, i) { g.o = i; byId[g.id] = g; g.g = arr(g.g); g.l = arr(g.l); g.c = arr(g.c); g.v = arr(g.v); });
+    reshuffle();
     fillControls(); apply();
     $('loading').hidden = true;
     var h = location.hash.replace('#', ''); if (byId[h]) open(h, false);
