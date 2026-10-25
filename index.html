@@ -316,7 +316,7 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
     if (g.pkg) facts.push(['包名', '<span style="font-family:var(--f-mono);font-size:12px">' + esc(g.pkg) + '</span>']);
     var copies = (g.v || []).map(function (v, i) {
       return '<div class="copy"><div class="top"><span class="chip">' + esc(v.cat) + '</span>' + (v.lang ? '<span class="chip">' + esc(v.lang) + '</span>' : '') +
-        (v.region ? '<span class="chip">' + esc(v.region) + '</span>' : '') + (v.ver ? '<span class="chip">v' + esc(v.ver) + '</span>' : '') +
+        (v.region ? '<span class="chip">' + esc(v.region) + '</span>' : '') + (typeof v.ver === 'string' && v.ver ? '<span class="chip">v' + esc(v.ver) + '</span>' : '') +
         '<span class="size">' + (v.size >= 1024 ? (v.size / 1024).toFixed(1) + ' GB' : v.size + ' MB') + '</span></div>' +
         '<div class="path"><span>xplay\\' + esc(v.path) + '</span><button type="button" class="copybtn" data-copy="' + i + '">复制</button></div>' +
         (v.note ? '<div class="note">' + esc(v.note) + '</div>' : '') + '</div>';
