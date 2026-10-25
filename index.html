@@ -187,6 +187,7 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
 <body>
 
 
+
 <header class="deck">
   <div class="deck-inner gutter">
     <div class="brand">
@@ -399,7 +400,7 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
         (v.note ? '<div class="note">' + esc(v.note) + '</div>' : '') + '</div>';
     }).join('');
     var links = [];
-    if (g.src) Object.keys(g.src).forEach(function (k) { links.push('<a href="' + esc(g.src[k]) + '" target="_blank" rel="noopener">' + esc({ steam: 'Steam', wikiZh: '维基百科', wikiEn: 'Wikipedia', apk: 'APKPure' }[k] || k) + '</a>'); });
+    if (g.src) Object.keys(g.src).forEach(function (k) { links.push('<a href="' + esc(g.src[k]) + '" target="_blank" rel="noopener">' + esc({ steam: 'Steam', wikiZh: '维基百科', wikiEn: 'Wikipedia', apk: 'APKPure', psm: 'PSM Reborn', lb: 'LaunchBox' }[k] || k) + '</a>'); });
     var nShots = (manifest && manifest.count[id]) || 0;
     var sheet = $('sheet');
     sheet.innerHTML =
@@ -410,7 +411,8 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
       (g.why ? '<div class="why"><b>推荐理由</b> ' + esc(g.why) + '</div>' : '') +
       '<h3>合集里的版本</h3><div class="copies">' + copies + '</div></div>' +
       '<div><dl class="facts">' + facts.map(function (f) { return '<dt>' + f[0] + '</dt><dd>' + f[1] + '</dd>'; }).join('') + '</dl>' +
-      (links.length ? '<h3>资料来源</h3><div class="links">' + links.join('') + '</div><p class="src">简介由 Claude 根据这些来源整理，截图来自 APKPure、Steam 或维基百科。</p>' : '') +
+      (links.length ? '<h3>资料来源</h3><div class="links">' + links.join('') + '</div>' : '') +
+      '<p class="src">简介由 Claude 根据公开资料整理。截图来自 APKPure、Steam、维基百科、PSM Reborn、LaunchBox 或网络图片搜索，有些是这个游戏在其他平台上的画面。</p>' +
       '</div></div></div>';
     if (!nShots && !g.lead) $('d-shots').hidden = true;
     $('d-close').onclick = close;
@@ -532,6 +534,7 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
   });
 })();
 </script>
+
 
 </body>
 </html>
