@@ -85,6 +85,8 @@ select { height: 36px; border-radius: 18px; border: 1px solid var(--line); backg
 .genres button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 .genres button small { color: var(--faint); margin-left: 4px; font-variant-numeric: tabular-nums; }
 .genres button[aria-pressed="true"] small { color: inherit; opacity: .7; }
+.genres button.mode { border-style: dashed; border-color: var(--accent); color: var(--accent); }
+.sentinel { height: 1px; }
 
 /* ---------- grid ---------- */
 main { max-width: 1440px; margin: 0 auto; padding-block: 18px 60px; }
@@ -203,6 +205,10 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
         <option value="year">按年份（新→旧）</option>
         <option value="size">按大小（小→大）</option>
       </select>
+      <select id="view" aria-label="浏览方式">
+        <option value="scroll">无限滚动</option>
+        <option value="pages">分页（每页 10 个）</option>
+      </select>
       <button type="button" class="toggle" id="t-pick" aria-pressed="false"><span class="dot"></span>只看推荐</button>
       <button type="button" class="toggle" id="t-commute" aria-pressed="false"><span class="dot"></span>适合通勤</button>
       <button type="button" class="toggle" id="t-shot" aria-pressed="false"><span class="dot"></span>只看有截图</button>
@@ -216,6 +222,7 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
   <p class="empty" id="empty" hidden>没有符合条件的游戏。试试清除搜索词或换个筛选条件。</p>
   <p class="loading" id="loading">正在载入游戏资料…</p>
   <nav class="pager" id="pager" aria-label="分页" hidden></nav>
+  <div class="sentinel" id="sentinel"></div>
 </main>
 
 <dialog id="dlg" aria-labelledby="d-title">
@@ -225,9 +232,11 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
 <script>
 (function () {
   var PLAT = { Android: ['△', '安卓'], PS1: ['✕', 'PS1'], PSM: ['○', 'PS Mobile'], PSP: ['□', 'PSP'] };
-  var state = { q: '', plat: '', lang: '', cat: '', genre: '', sort: 'pick', pick: false, commute: false, shot: false };
+  // genres: several can be picked; gmode 'all' keeps games that have every picked genre, 'any' keeps games with at least one.
+  // view: 'scroll' loads more cards as you scroll, 'pages' shows PER cards per page with a pager.
+  var state = { q: '', plat: '', lang: '', cat: '', genres: [], gmode: 'all', sort: 'pick', view: 'scroll', pick: false, commute: false, shot: false };
   var games = [], byId = {}, icons = {}, covers = {}, manifest = null, shotCache = {}, shotLoads = {};
-  var list = [], page = 1, PER = 10;
+  var list = [], page = 1, PER = 10, shown = 0, CHUNK = 40;
   var $ = function (id) { return document.getElementById(id); };
   var grid = $('grid');
 
@@ -259,7 +268,10 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
     if (state.plat && g.p !== state.plat && !(state.plat === 'PSM' && g.p === 'PSP')) return false;
     if (state.lang && (g.l || []).indexOf(state.lang) < 0) return false;
     if (state.cat && (g.c || []).indexOf(state.cat) < 0) return false;
-    if (state.genre && (g.g || []).indexOf(state.genre) < 0) return false;
+    if (state.genres.length) {
+      var has = function (x) { return g.g.indexOf(x) >= 0; };
+      if (state.gmode === 'any' ? !state.genres.some(has) : !state.genres.every(has)) return false;
+    }
     if (state.pick && !g.pick) return false;
     if (state.commute && !g.commute) return false;
     if (state.shot && !covers[g.id]) return false;
@@ -279,7 +291,7 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
   // keepPage: covers arriving in the background re-sort the list without sending the reader back to page 1
   function apply(keepPage) {
     list = games.filter(matches).sort(sorter);
-    if (!keepPage) page = 1;
+    if (!keepPage) { page = 1; shown = 0; }
     renderPage();
     $('count').textContent = '共 ' + list.length + ' / ' + games.length + ' 个游戏';
     $('empty').hidden = list.length > 0;
@@ -287,12 +299,27 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
   }
   function pages() { return Math.max(1, Math.ceil(list.length / PER)); }
   function renderPage() {
+    if (state.view === 'scroll') {
+      // keep roughly as many cards as were on screen, so a background re-sort does not cut the list short
+      var keep = Math.max(CHUNK, shown);
+      shown = 0; grid.innerHTML = ''; more(keep);
+      $('pager').hidden = true;
+      return;
+    }
     page = Math.min(Math.max(1, page), pages());
     var html = '';
     for (var i = (page - 1) * PER; i < Math.min(list.length, page * PER); i++) html += card(list[i]);
     grid.innerHTML = html;
     renderPager();
   }
+  function more(n) {
+    if (state.view !== 'scroll' || shown >= list.length) return;
+    var html = '', end = Math.min(list.length, shown + (n || CHUNK));
+    for (var i = shown; i < end; i++) html += card(list[i]);
+    grid.insertAdjacentHTML('beforeend', html);
+    shown = end;
+  }
+  new IntersectionObserver(function (es) { if (es[0].isIntersecting) more(); }, { rootMargin: '800px' }).observe($('sentinel'));
   function renderPager() {
     var n = pages(), el = $('pager');
     el.hidden = list.length <= PER;
@@ -319,7 +346,7 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
   }
   $('pager').addEventListener('click', function (e) { var b = e.target.closest('button[data-page]'); if (b && !b.disabled) goTo(+b.getAttribute('data-page')); });
   document.addEventListener('keydown', function (e) {
-    if ($('dlg').open || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
+    if (state.view !== 'pages' || $('dlg').open || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
     if (e.key === 'ArrowRight' && page < pages()) goTo(page + 1);
     if (e.key === 'ArrowLeft' && page > 1) goTo(page - 1);
   });
@@ -414,8 +441,28 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
       apply();
     });
   }
-  bindSeg('plat', 'plat'); bindSeg('genres', 'genre');
-  ['lang', 'cat', 'sort'].forEach(function (k) { $(k).addEventListener('change', function () { state[k] = this.value; apply(); }); });
+  bindSeg('plat', 'plat');
+  function syncGenres() {
+    $('genres').querySelectorAll('button[data-v]').forEach(function (b) {
+      var v = b.getAttribute('data-v');
+      b.setAttribute('aria-pressed', v === '' ? !state.genres.length : state.genres.indexOf(v) >= 0);
+    });
+    var m = $('g-mode');
+    m.hidden = state.genres.length < 2;
+    m.textContent = state.gmode === 'any' ? '满足任一类型' : '同时满足所有类型';
+  }
+  $('genres').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.id === 'g-mode') { state.gmode = state.gmode === 'any' ? 'all' : 'any'; }
+    else {
+      var v = b.getAttribute('data-v'), i = state.genres.indexOf(v);
+      if (v === '') state.genres = [];
+      else if (i >= 0) state.genres.splice(i, 1);
+      else state.genres.push(v);
+    }
+    syncGenres(); apply();
+  });
+  ['lang', 'cat', 'sort', 'view'].forEach(function (k) { $(k).addEventListener('change', function () { state[k] = this.value; apply(); }); });
   [['t-pick', 'pick'], ['t-commute', 'commute'], ['t-shot', 'shot']].forEach(function (p) {
     $(p[0]).addEventListener('click', function () { state[p[1]] = !state[p[1]]; this.setAttribute('aria-pressed', state[p[1]]); apply(); });
   });
@@ -424,6 +471,7 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
   function fillControls() {
     var count = function (key) { var m = {}; games.forEach(function (g) { (g[key] || []).forEach(function (x) { m[x] = (m[x] || 0) + 1; }); }); return Object.keys(m).sort(function (a, b) { return m[b] - m[a]; }).map(function (k) { return [k, m[k]]; }); };
     $('genres').innerHTML = '<button type="button" data-v="" aria-pressed="true">全部类型</button>' +
+      '<button type="button" class="mode" id="g-mode" hidden title="切换：同时满足所有类型 / 满足任一类型"></button>' +
       count('g').map(function (x) { return '<button type="button" data-v="' + esc(x[0]) + '" aria-pressed="false">' + esc(x[0]) + '<small>' + x[1] + '</small></button>'; }).join('');
     $('lang').insertAdjacentHTML('beforeend', count('l').map(function (x) { return '<option value="' + esc(x[0]) + '">' + esc(x[0]) + '（' + x[1] + '）</option>'; }).join(''));
     $('cat').insertAdjacentHTML('beforeend', count('c').map(function (x) { return '<option value="' + esc(x[0]) + '">' + esc(x[0]) + '（' + x[1] + '）</option>'; }).join(''));
@@ -432,11 +480,14 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
       try {
         var s = JSON.parse(saved);
         Object.keys(state).forEach(function (k) { if (k in s && k !== 'q') state[k] = s[k]; });
-        ['lang', 'cat', 'sort'].forEach(function (k) { $(k).value = state[k]; if ($(k).value !== state[k]) state[k] = ''; });
-        [['plat', 'plat'], ['genres', 'genre']].forEach(function (p) { $(p[0]).querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-v') === state[p[1]]); }); });
+        if (!Array.isArray(state.genres)) state.genres = [];
+        state.genres = state.genres.filter(function (v) { return $('genres').querySelector('button[data-v="' + v.replace(/"/g, '') + '"]'); });
+        ['lang', 'cat', 'sort', 'view'].forEach(function (k) { $(k).value = state[k]; if ($(k).value !== state[k]) state[k] = $(k).options[0].value; });
+        $('plat').querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-v') === state.plat); });
         [['t-pick', 'pick'], ['t-commute', 'commute'], ['t-shot', 'shot']].forEach(function (p) { $(p[0]).setAttribute('aria-pressed', !!state[p[1]]); });
       } catch (e) {}
     }
+    syncGenres();
   }
 
   // ---------- boot ----------
