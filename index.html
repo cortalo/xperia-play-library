@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Xperia Play 游戏库</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Saira+Semi+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky control deck (like the slide-out pad) over a dense cover grid; a sheet slides up for each game.
+   The four PlayStation face-button colors mark the four platforms. */
+:root {
+  --bg: #121419;
+  --deck: #181b22;
+  --panel: #1e212a;
+  --line: #2b2f3b;
+  --fg: #ecedf2;
+  --muted: #9a9eae;
+  --faint: #6c7080;
+  --accent: #9db8ff;
+  --on-accent: #10131a;
+  --tri: #45c79a;    /* △ Android */
+  --cross: #6f9bf5;  /* ✕ PS1 */
+  --circle: #f2706a; /* ○ PSM */
+  --square: #e48ad2; /* □ PSP */
+  --star: #f4c35a;
+  --shade: rgba(6, 8, 12, .72);
+  --well: #23262f;   /* icon well: icons are baked onto this color, so it stays the same in both themes */
+  --well-line: #333744;
+  --f-display: "Saira Semi Condensed", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --f-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #eef0f4; --deck: #f8f9fb; --panel: #ffffff; --line: #d9dce4; --fg: #181b22; --muted: #5b6070; --faint: #8a8f9e;
+    --accent: #2f5fd0; --on-accent: #ffffff; --tri: #17926a; --cross: #2f62cf; --circle: #cf3f39; --square: #b2449d; --star: #b07900;
+    --shade: rgba(20, 24, 32, .55); color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #eef0f4; --deck: #f8f9fb; --panel: #ffffff; --line: #d9dce4; --fg: #181b22; --muted: #5b6070; --faint: #8a8f9e;
+  --accent: #2f5fd0; --on-accent: #ffffff; --tri: #17926a; --cross: #2f62cf; --circle: #cf3f39; --square: #b2449d; --star: #b07900;
+  --shade: rgba(20, 24, 32, .55); color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 14px; line-height: 1.6; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--deck); }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- control deck ---------- */
+.deck { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--deck); border-bottom: 1px solid var(--line); }
+.deck-inner { max-width: 1440px; margin: 0 auto; padding-block: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.brand h1 { margin: 0; font-family: var(--f-display); font-weight: 700; font-size: 22px; letter-spacing: .02em; line-height: 1.2; }
+.brand h1 b { font-family: var(--f-body); font-weight: 900; margin-left: 4px; }
+.glyphs { display: inline-flex; gap: 3px; font-size: 13px; transform: translateY(-1px); }
+.glyphs span:nth-child(1) { color: var(--tri); } .glyphs span:nth-child(2) { color: var(--circle); }
+.glyphs span:nth-child(3) { color: var(--cross); } .glyphs span:nth-child(4) { color: var(--square); }
+.count { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; margin-left: auto; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.search { flex: 1 1 260px; min-width: 0; position: relative; }
+.search input { width: 100%; height: 38px; border-radius: 19px; border: 1px solid var(--line); background: var(--panel); padding: 0 14px 0 36px; }
+.search input::placeholder { color: var(--faint); }
+.search svg { position: absolute; left: 12px; top: 11px; width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 2; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 19px; overflow: hidden; background: var(--panel); flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; height: 36px; padding: 0 12px; cursor: pointer; white-space: nowrap; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.seg button .g { margin-right: 5px; }
+.seg button[aria-pressed="false"] .g.tri { color: var(--tri); } .seg button[aria-pressed="false"] .g.cross { color: var(--cross); }
+.seg button[aria-pressed="false"] .g.circle { color: var(--circle); } .seg button[aria-pressed="false"] .g.square { color: var(--square); }
+select { height: 36px; border-radius: 18px; border: 1px solid var(--line); background: var(--panel); padding: 0 30px 0 12px; max-width: 100%; }
+.toggle { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; color: var(--muted); white-space: nowrap; }
+.toggle[aria-pressed="true"] { border-color: var(--accent); color: var(--fg); }
+.toggle[aria-pressed="true"] .dot { background: var(--accent); }
+.toggle .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.genres { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.genres::-webkit-scrollbar { display: none; }
+.genres button { flex: none; border: 1px solid var(--line); background: transparent; border-radius: 14px; height: 28px; padding: 0 11px; cursor: pointer; color: var(--muted); font-size: 13px; }
+.genres button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.genres button small { color: var(--faint); margin-left: 4px; font-variant-numeric: tabular-nums; }
+.genres button[aria-pressed="true"] small { color: inherit; opacity: .7; }
+
+/* ---------- grid ---------- */
+main { max-width: 1440px; margin: 0 auto; padding-block: 18px 60px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px 14px; }
+.card { display: flex; flex-direction: column; gap: 8px; min-width: 0; cursor: pointer; background: none; border: 0; padding: 0; text-align: left; }
+.cover { position: relative; aspect-ratio: 16 / 10; max-width: 100%; border-radius: 10px; overflow: hidden; background: var(--panel); border: 1px solid var(--line); }
+.cover img.shot { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .35s ease; }
+.card:hover .cover img.shot { transform: scale(1.04); }
+.cover .noshot { position: absolute; inset: 0; display: grid; place-items: center; background: var(--well); }
+.cover .noshot img { width: 72px; height: 72px; border-radius: 16px; }
+.cover .noshot .mono { font-family: var(--f-display); font-size: 30px; font-weight: 700; color: var(--faint); }
+.cover .plat { position: absolute; top: 8px; left: 8px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; background: var(--shade); }
+.plat.Android, .g-Android { color: var(--tri); } .plat.PS1, .g-PS1 { color: var(--cross); }
+.plat.PSM, .g-PSM { color: var(--circle); } .plat.PSP, .g-PSP { color: var(--square); }
+.cover .pick { position: absolute; top: 8px; right: 8px; background: var(--shade); color: var(--star); font-size: 12px; padding: 1px 8px; border-radius: 10px; font-weight: 700; }
+.meta { display: flex; gap: 10px; align-items: flex-start; min-width: 0; }
+.meta .icon { flex: none; width: 40px; height: 40px; border-radius: 9px; background: var(--well); border: 1px solid var(--well-line); overflow: hidden; }
+.meta .icon:empty { display: none; }
+.meta .icon img { width: 100%; height: 100%; display: block; }
+.meta .txt { min-width: 0; display: flex; flex-direction: column; }
+.meta .t { font-weight: 700; font-size: 14.5px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.meta .e { font-family: var(--f-display); color: var(--muted); font-size: 13px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chips { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+.chip { font-size: 11.5px; line-height: 18px; padding: 0 7px; border-radius: 9px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chip.zh { border-color: transparent; background: var(--panel); color: var(--fg); }
+.chip.star { border-color: var(--star); color: var(--star); }
+.empty { color: var(--muted); padding: 60px 0; text-align: center; }
+.sentinel { height: 1px; }
+.loading { color: var(--muted); padding: 40px 0; }
+
+/* ---------- detail sheet ---------- */
+dialog { border: 0; padding: 0; background: transparent; max-width: none; max-height: none; width: 100%; height: 100%; color: var(--fg); }
+dialog::backdrop { background: var(--shade); backdrop-filter: blur(3px); }
+.sheet { position: absolute; inset: auto 0 0 0; margin: 0 auto; max-width: 980px; max-height: calc(100% - 40px - env(safe-area-inset-top, 0px)); overflow-y: auto; background: var(--deck); border-radius: 16px 16px 0 0; border: 1px solid var(--line); border-bottom: 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+@media (min-width: 760px) { .sheet { inset: 50% auto auto 50%; transform: translate(-50%, -50%); width: calc(100% - 64px); max-height: calc(100% - 64px); border-radius: 16px; border-bottom: 1px solid var(--line); } }
+.sheet-head { position: sticky; top: 0; z-index: 2; background: var(--deck); display: flex; gap: 14px; align-items: center; padding-block: 16px 12px; border-bottom: 1px solid var(--line); }
+.sheet-head .icon { flex: none; width: 56px; height: 56px; border-radius: 12px; overflow: hidden; background: var(--well); border: 1px solid var(--well-line); display: grid; place-items: center; }
+.sheet-head .icon img { width: 100%; height: 100%; }
+.sheet-head h2 { margin: 0; font-size: 20px; line-height: 1.3; text-wrap: balance; }
+.sheet-head .e { font-family: var(--f-display); color: var(--muted); font-size: 15px; }
+.sheet-head .txt { min-width: 0; flex: 1; }
+.close { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); cursor: pointer; font-size: 18px; line-height: 1; }
+.shots { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-block: 14px 4px; }
+.shots img { flex: none; height: 220px; width: auto; max-width: 88%; border-radius: 8px; scroll-snap-align: start; border: 1px solid var(--line); background: var(--panel); }
+.shots .ph { flex: none; height: 220px; aspect-ratio: 16/10; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); }
+@media (max-width: 520px) { .shots img, .shots .ph { height: 170px; } }
+.body { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 24px; padding-block: 12px 24px; }
+@media (max-width: 760px) { .body { grid-template-columns: 1fr; } }
+.blurb { font-size: 15px; line-height: 1.85; max-width: 62ch; white-space: pre-line; }
+.blurb.none { color: var(--muted); }
+.why { margin-top: 12px; padding: 10px 14px; border-radius: 10px; background: var(--panel); border-left: 3px solid var(--star); font-size: 14px; }
+.why b { color: var(--star); }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; font-size: 13.5px; align-content: start; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0 8px; font-weight: 500; }
+.copies { display: flex; flex-direction: column; gap: 8px; }
+.copy { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--panel); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.copy .top { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+.copy .top .size { margin-left: auto; color: var(--muted); font-family: var(--f-mono); font-size: 12px; }
+.copy .path { font-family: var(--f-mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; display: flex; gap: 8px; align-items: flex-start; }
+.copy .path span { flex: 1; min-width: 0; }
+.copy .note { font-size: 12.5px; color: var(--circle); }
+.copybtn { flex: none; border: 1px solid var(--line); background: transparent; border-radius: 6px; font-size: 12px; padding: 1px 8px; cursor: pointer; color: var(--fg); }
+.links { display: flex; gap: 8px; flex-wrap: wrap; }
+.links a { color: var(--accent); font-size: 13px; text-decoration: none; border: 1px solid var(--line); border-radius: 14px; padding: 2px 10px; }
+.links a:hover { border-color: var(--accent); }
+.src { color: var(--faint); font-size: 12px; margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { .cover img.shot { transition: none; } }
+@media (max-width: 720px) {
+  /* the full control deck is too tall to pin on a phone */
+  .deck { position: static; }
+  .row select { flex: 1 1 140px; min-width: 0; }
+  .toggle { padding: 0 10px; }
+}
+@media (max-width: 520px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 10px; }
+  .meta .icon { display: none; }
+  .brand h1 { font-size: 19px; }
+}
+</style>
+</head>
+<body>
+
+
+<header class="deck">
+  <div class="deck-inner gutter">
+    <div class="brand">
+      <h1>XPERIA PLAY<b>游戏库</b></h1>
+      <span class="glyphs" aria-hidden="true"><span>△</span><span>○</span><span>✕</span><span>□</span></span>
+      <span class="count" id="count">正在载入…</span>
+    </div>
+    <div class="row">
+      <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" type="search" placeholder="搜索中文名、英文名或文件夹" autocomplete="off"></label>
+      <div class="seg" id="plat" role="group" aria-label="平台">
+        <button type="button" data-v="" aria-pressed="true">全部</button>
+        <button type="button" data-v="Android" aria-pressed="false"><span class="g tri">△</span>安卓</button>
+        <button type="button" data-v="PS1" aria-pressed="false"><span class="g cross">✕</span>PS1</button>
+        <button type="button" data-v="PSM" aria-pressed="false"><span class="g circle">○</span>PS Mobile</button>
+      </div>
+    </div>
+    <div class="row">
+      <select id="lang" aria-label="语言"><option value="">所有语言</option></select>
+      <select id="cat" aria-label="所在文件夹"><option value="">所有文件夹</option></select>
+      <select id="sort" aria-label="排序">
+        <option value="pick">推荐优先</option>
+        <option value="name">按名称</option>
+        <option value="year">按年份（新→旧）</option>
+        <option value="size">按大小（小→大）</option>
+      </select>
+      <button type="button" class="toggle" id="t-pick" aria-pressed="false"><span class="dot"></span>只看推荐</button>
+      <button type="button" class="toggle" id="t-commute" aria-pressed="false"><span class="dot"></span>适合通勤</button>
+      <button type="button" class="toggle" id="t-shot" aria-pressed="false"><span class="dot"></span>只看有截图</button>
+    </div>
+    <div class="genres" id="genres" role="group" aria-label="类型"></div>
+  </div>
+</header>
+
+<main class="gutter">
+  <div class="grid" id="grid"></div>
+  <p class="empty" id="empty" hidden>没有符合条件的游戏。试试清除搜索词或换个筛选条件。</p>
+  <p class="loading" id="loading">正在载入游戏资料…</p>
+  <div class="sentinel" id="sentinel"></div>
+</main>
+
+<dialog id="dlg" aria-labelledby="d-title">
+  <div class="sheet" id="sheet"></div>
+</dialog>
+
+<script>
+(function () {
+  var PLAT = { Android: ['△', '安卓'], PS1: ['✕', 'PS1'], PSM: ['○', 'PS Mobile'], PSP: ['□', 'PSP'] };
+  var state = { q: '', plat: '', lang: '', cat: '', genre: '', sort: 'pick', pick: false, commute: false, shot: false };
+  var games = [], byId = {}, icons = {}, covers = {}, manifest = null, shotCache = {}, shotLoads = {};
+  var list = [], shown = 0, PAGE = 60;
+  var $ = function (id) { return document.getElementById(id); };
+  var grid = $('grid');
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function getJSON(p) { return fetch(p).then(function (r) { if (!r.ok) throw new Error(p + ' ' + r.status); return r.json(); }); }
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+  function iconHTML(g, cls) {
+    var src = icons[g.id];
+    if (src) return '<img src="' + src + '" alt="" loading="lazy">';
+    return '<span class="mono">' + esc((g.e || g.t).replace(/^the\s+/i, '').charAt(0).toUpperCase()) + '</span>';
+  }
+  function card(g) {
+    var c = covers[g.id];
+    var plat = PLAT[g.p] || ['', g.p];
+    var cover = c ? '<img class="shot" src="' + c + '" alt="" loading="lazy">'
+      : '<div class="noshot">' + iconHTML(g) + '</div>';
+    var chips = (g.g || []).slice(0, 2).map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('');
+    if (g.l && g.l.length) chips += '<span class="chip' + (/中/.test(g.l[0]) ? ' zh' : '') + '">' + esc(g.l[0]) + '</span>';
+    return '<button type="button" class="card" data-id="' + g.id + '" aria-label="' + esc(g.t) + '">' +
+      '<div class="cover">' + cover + '<span class="plat ' + g.p + '" title="' + plat[1] + '">' + plat[0] + '</span>' +
+      (g.pick ? '<span class="pick">推荐</span>' : '') + '</div>' +
+      '<div class="meta"><div class="icon">' + (icons[g.id] ? '<img src="' + icons[g.id] + '" alt="" loading="lazy">' : '') + '</div>' +
+      '<div class="txt"><span class="t">' + esc(g.t) + '</span>' + (g.e && g.e !== g.t ? '<span class="e">' + esc(g.e) + '</span>' : '') +
+      '<div class="chips">' + chips + '</div></div></div></button>';
+  }
+
+  function matches(g) {
+    if (state.plat && g.p !== state.plat && !(state.plat === 'PSM' && g.p === 'PSP')) return false;
+    if (state.lang && (g.l || []).indexOf(state.lang) < 0) return false;
+    if (state.cat && (g.c || []).indexOf(state.cat) < 0) return false;
+    if (state.genre && (g.g || []).indexOf(state.genre) < 0) return false;
+    if (state.pick && !g.pick) return false;
+    if (state.commute && !g.commute) return false;
+    if (state.shot && !covers[g.id]) return false;
+    if (state.q) {
+      var hay = g._hay || (g._hay = [g.t, g.e, g.dev, (g.v || []).map(function (v) { return v.path; }).join(' ')].join(' ').toLowerCase());
+      var words = state.q.toLowerCase().split(/\s+/).filter(Boolean);
+      for (var i = 0; i < words.length; i++) if (hay.indexOf(words[i]) < 0) return false;
+    }
+    return true;
+  }
+  function sorter(a, b) {
+    if (state.sort === 'name') return (a.e || a.t).localeCompare(b.e || b.t, 'zh');
+    if (state.sort === 'year') return (b.y || 0) - (a.y || 0);
+    if (state.sort === 'size') return (a.size || 0) - (b.size || 0);
+    return (b.pick ? 2 : 0) + (covers[b.id] ? 1 : 0) - ((a.pick ? 2 : 0) + (covers[a.id] ? 1 : 0)) || a.o - b.o;
+  }
+  function apply() {
+    list = games.filter(matches).sort(sorter);
+    grid.innerHTML = ''; shown = 0; more();
+    $('count').textContent = '显示 ' + list.length + ' / ' + games.length + ' 个游戏';
+    $('empty').hidden = list.length > 0;
+    store('xplay-filters', JSON.stringify(state));
+  }
+  function more() {
+    if (shown >= list.length) return;
+    var html = '';
+    for (var i = shown; i < Math.min(list.length, shown + PAGE); i++) html += card(list[i]);
+    grid.insertAdjacentHTML('beforeend', html);
+    shown = Math.min(list.length, shown + PAGE);
+  }
+  new IntersectionObserver(function (es) { if (es[0].isIntersecting) more(); }, { rootMargin: '800px' }).observe($('sentinel'));
+
+  function refreshCovers() {
+    grid.querySelectorAll('.card').forEach(function (el) {
+      var id = el.getAttribute('data-id');
+      if (covers[id] && !el.querySelector('img.shot')) {
+        var cv = el.querySelector('.cover'), nos = cv.querySelector('.noshot');
+        if (nos) nos.outerHTML = '<img class="shot" src="' + covers[id] + '" alt="" loading="lazy">';
+      }
+    });
+  }
+
+  // ---------- detail ----------
+  function loadShots(id) {
+    if (shotCache[id]) return Promise.resolve(shotCache[id]);
+    var k = manifest && manifest.shots[id];
+    if (k == null) return Promise.resolve([]);
+    if (!shotLoads[k]) shotLoads[k] = getJSON('shots-' + k + '.json').then(function (d) { Object.keys(d).forEach(function (x) { shotCache[x] = d[x]; }); return d; });
+    return shotLoads[k].then(function () { return shotCache[id] || []; });
+  }
+  function open(id, push) {
+    var g = byId[id]; if (!g) return;
+    var plat = PLAT[g.p] || ['', g.p];
+    var facts = [['平台', '<span class="g-' + g.p + '">' + plat[0] + '</span> ' + plat[1]]];
+    if (g.g && g.g.length) facts.push(['类型', esc(g.g.join(' · '))]);
+    if (g.l && g.l.length) facts.push(['语言', esc(g.l.join(' / '))]);
+    if (g.dev) facts.push(['开发', esc(g.dev)]);
+    if (g.y) facts.push(['年份', g.y]);
+    var tags = []; if (g.pick) tags.push('推荐'); if (g.commute) tags.push('适合通勤');
+    if (tags.length) facts.push(['标签', tags.map(function (t) { return '<span class="chip' + (t === '推荐' ? ' star' : '') + '">' + t + '</span>'; }).join(' ')]);
+    if (g.pkg) facts.push(['包名', '<span style="font-family:var(--f-mono);font-size:12px">' + esc(g.pkg) + '</span>']);
+    var copies = (g.v || []).map(function (v, i) {
+      return '<div class="copy"><div class="top"><span class="chip">' + esc(v.cat) + '</span>' + (v.lang ? '<span class="chip">' + esc(v.lang) + '</span>' : '') +
+        (v.region ? '<span class="chip">' + esc(v.region) + '</span>' : '') + (v.ver ? '<span class="chip">v' + esc(v.ver) + '</span>' : '') +
+        '<span class="size">' + (v.size >= 1024 ? (v.size / 1024).toFixed(1) + ' GB' : v.size + ' MB') + '</span></div>' +
+        '<div class="path"><span>xplay\\' + esc(v.path) + '</span><button type="button" class="copybtn" data-copy="' + i + '">复制</button></div>' +
+        (v.note ? '<div class="note">' + esc(v.note) + '</div>' : '') + '</div>';
+    }).join('');
+    var links = [];
+    if (g.src) Object.keys(g.src).forEach(function (k) { links.push('<a href="' + esc(g.src[k]) + '" target="_blank" rel="noopener">' + esc({ steam: 'Steam', wikiZh: '维基百科', wikiEn: 'Wikipedia', apk: 'APKPure' }[k] || k) + '</a>'); });
+    var nShots = (manifest && manifest.count[id]) || 0;
+    var sheet = $('sheet');
+    sheet.innerHTML =
+      '<div class="sheet-head gutter"><div class="icon">' + iconHTML(g) + '</div><div class="txt"><h2 id="d-title">' + esc(g.t) + '</h2>' +
+      (g.e && g.e !== g.t ? '<div class="e">' + esc(g.e) + '</div>' : '') + '</div><button type="button" class="close" id="d-close" aria-label="关闭">✕</button></div>' +
+      '<div class="gutter"><div class="shots" id="d-shots">' + (nShots ? new Array(nShots + 1).join('<div class="ph"></div>') : '') + '</div>' +
+      '<div class="body"><div>' + (g.s ? '<p class="blurb">' + esc(g.s) + '</p>' : '<p class="blurb none">暂时没有找到这个游戏的介绍资料。</p>') +
+      (g.why ? '<div class="why"><b>推荐理由</b> ' + esc(g.why) + '</div>' : '') +
+      '<h3>合集里的版本</h3><div class="copies">' + copies + '</div></div>' +
+      '<div><dl class="facts">' + facts.map(function (f) { return '<dt>' + f[0] + '</dt><dd>' + f[1] + '</dd>'; }).join('') + '</dl>' +
+      (links.length ? '<h3>资料来源</h3><div class="links">' + links.join('') + '</div><p class="src">简介由 Claude 根据这些来源整理，截图来自 APKPure、Steam 或维基百科。</p>' : '') +
+      '</div></div></div>';
+    if (!nShots && !g.lead) $('d-shots').hidden = true;
+    $('d-close').onclick = close;
+    sheet.querySelectorAll('[data-copy]').forEach(function (b) {
+      b.onclick = function () {
+        var text = 'xplay\\' + g.v[+b.getAttribute('data-copy')].path;
+        var done = function () { b.textContent = '已复制'; setTimeout(function () { b.textContent = '复制'; }, 1500); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { selectPath(b); });
+        else selectPath(b);
+      };
+    });
+    var dlg = $('dlg');
+    if (!dlg.open) dlg.showModal();
+    sheet.scrollTop = 0;
+    if (push !== false) { try { history.replaceState(null, '', '#' + id); } catch (e) {} }
+    loadShots(id).then(function (arr) {
+      if (byId[id] !== g || !dlg.open) return;
+      var el = $('d-shots');
+      var html = arr.map(function (s) { return '<img src="' + s + '" alt="' + esc(g.t) + ' 截图">'; }).join('');
+      if (!arr.length && g.lead) html = '<img src="' + g.lead + '" alt="' + esc(g.t) + '">';
+      el.innerHTML = html; el.hidden = !html;
+    }).catch(function () { $('d-shots').hidden = true; });
+  }
+  function selectPath(b) {
+    var span = b.previousElementSibling, r = document.createRange(); r.selectNodeContents(span);
+    var s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = '已选中';
+  }
+  function close() { var d = $('dlg'); if (d.open) d.close(); }
+  $('dlg').addEventListener('close', function () { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} });
+  $('dlg').addEventListener('click', function (e) { if (e.target === this) close(); });
+  grid.addEventListener('click', function (e) { var c = e.target.closest('.card'); if (c) open(c.getAttribute('data-id')); });
+
+  // ---------- controls ----------
+  function bindSeg(id, key) {
+    $(id).addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      state[key] = b.getAttribute('data-v');
+      this.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+      apply();
+    });
+  }
+  bindSeg('plat', 'plat'); bindSeg('genres', 'genre');
+  ['lang', 'cat', 'sort'].forEach(function (k) { $(k).addEventListener('change', function () { state[k] = this.value; apply(); }); });
+  [['t-pick', 'pick'], ['t-commute', 'commute'], ['t-shot', 'shot']].forEach(function (p) {
+    $(p[0]).addEventListener('click', function () { state[p[1]] = !state[p[1]]; this.setAttribute('aria-pressed', state[p[1]]); apply(); });
+  });
+  var qt; $('q').addEventListener('input', function () { var v = this.value; clearTimeout(qt); qt = setTimeout(function () { state.q = v.trim(); apply(); }, 120); });
+
+  function fillControls() {
+    var count = function (key) { var m = {}; games.forEach(function (g) { (g[key] || []).forEach(function (x) { m[x] = (m[x] || 0) + 1; }); }); return Object.keys(m).sort(function (a, b) { return m[b] - m[a]; }).map(function (k) { return [k, m[k]]; }); };
+    $('genres').innerHTML = '<button type="button" data-v="" aria-pressed="true">全部类型</button>' +
+      count('g').map(function (x) { return '<button type="button" data-v="' + esc(x[0]) + '" aria-pressed="false">' + esc(x[0]) + '<small>' + x[1] + '</small></button>'; }).join('');
+    $('lang').insertAdjacentHTML('beforeend', count('l').map(function (x) { return '<option value="' + esc(x[0]) + '">' + esc(x[0]) + '（' + x[1] + '）</option>'; }).join(''));
+    $('cat').insertAdjacentHTML('beforeend', count('c').map(function (x) { return '<option value="' + esc(x[0]) + '">' + esc(x[0]) + '（' + x[1] + '）</option>'; }).join(''));
+    var saved = store('xplay-filters');
+    if (saved) {
+      try {
+        var s = JSON.parse(saved);
+        Object.keys(state).forEach(function (k) { if (k in s && k !== 'q') state[k] = s[k]; });
+        ['lang', 'cat', 'sort'].forEach(function (k) { $(k).value = state[k]; if ($(k).value !== state[k]) state[k] = ''; });
+        [['plat', 'plat'], ['genres', 'genre']].forEach(function (p) { $(p[0]).querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-v') === state[p[1]]); }); });
+        [['t-pick', 'pick'], ['t-commute', 'commute'], ['t-shot', 'shot']].forEach(function (p) { $(p[0]).setAttribute('aria-pressed', !!state[p[1]]); });
+      } catch (e) {}
+    }
+  }
+
+  // ---------- boot ----------
+  Promise.all([getJSON('games.json'), getJSON('manifest.json'), getJSON('icons.json').catch(function () { return {}; })]).then(function (r) {
+    games = r[0]; manifest = r[1]; icons = r[2];
+    var arr = function (x) { return Array.isArray(x) ? x : (x == null || (typeof x === 'object' && !Object.keys(x).length)) ? [] : [x]; };
+    games.forEach(function (g, i) { g.o = i; byId[g.id] = g; g.g = arr(g.g); g.l = arr(g.l); g.c = arr(g.c); g.v = arr(g.v); });
+    fillControls(); apply();
+    $('loading').hidden = true;
+    var h = location.hash.replace('#', ''); if (byId[h]) open(h, false);
+    window.addEventListener('hashchange', function () { var k = location.hash.replace('#', ''); if (byId[k]) open(k, false); });
+    // covers arrive in chunks; cards upgrade as each chunk lands
+    var seq = Promise.resolve();
+    for (var k = 0; k < manifest.coverChunks; k++) (function (k) {
+      seq = seq.then(function () { return getJSON('covers-' + k + '.json'); }).then(function (d) {
+        Object.keys(d).forEach(function (x) { covers[x] = d[x]; });
+        if (state.shot || state.sort === 'pick') apply(); else refreshCovers();
+      }).catch(function () {});
+    })(k);
+  }).catch(function (e) {
+    $('loading').textContent = '游戏资料没能载入（' + e.message + '）。请刷新页面再试一次。';
+  });
+})();
+</script>
+
+</body>
+</html>
