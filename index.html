@@ -120,6 +120,7 @@ main { max-width: 1440px; margin: 0 auto; padding-block: 18px 60px; }
 .chip { font-size: 11.5px; line-height: 18px; padding: 0 7px; border-radius: 9px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
 .chip.zh { border-color: transparent; background: var(--panel); color: var(--fg); }
 .chip.star { border-color: var(--star); color: var(--star); }
+.chip.db { border-color: var(--tri); color: var(--tri); font-weight: 700; font-variant-numeric: tabular-nums; }
 .empty { color: var(--muted); padding: 60px 0; text-align: center; }
 .pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-top: 28px; font-variant-numeric: tabular-nums; }
 .pager .nums { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
@@ -210,6 +211,7 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
       <select id="sort" aria-label="排序">
         <option value="pick">推荐优先</option>
         <option value="name">按名称</option>
+        <option value="douban">按豆瓣评分（高→低）</option>
         <option value="year">按年份（新→旧）</option>
         <option value="size">按大小（小→大）</option>
         <option value="random">随机顺序</option>
@@ -264,7 +266,8 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
     var plat = PLAT[g.p] || ['', g.p];
     var cover = c ? '<img class="shot" src="' + c + '" alt="" loading="lazy">'
       : '<div class="noshot">' + iconHTML(g) + '</div>';
-    var chips = (g.g || []).slice(0, 2).map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('');
+    var chips = (g.db ? '<span class="chip db" title="豆瓣评分（' + g.dbn + '人评价）">豆瓣 ' + g.db.toFixed(1) + '</span>' : '') +
+      (g.g || []).slice(0, 2).map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('');
     if (g.l && g.l.length) chips += '<span class="chip' + (/中/.test(g.l[0]) ? ' zh' : '') + '">' + esc(g.l[0]) + '</span>';
     return '<button type="button" class="card" data-id="' + g.id + '" aria-label="' + esc(g.t) + '">' +
       '<div class="cover">' + cover + '<span class="plat ' + g.p + '" title="' + plat[1] + '">' + plat[0] + '</span>' +
@@ -296,6 +299,8 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
     if (state.sort === 'name') return (a.e || a.t).localeCompare(b.e || b.t, 'zh');
     if (state.sort === 'year') return (b.y || 0) - (a.y || 0);
     if (state.sort === 'size') return (a.size || 0) - (b.size || 0);
+    // unrated games go last; equal ratings put the one more people rated first
+    if (state.sort === 'douban') return (b.db || 0) - (a.db || 0) || (b.dbn || 0) - (a.dbn || 0) || a.o - b.o;
     // each game keeps its random key until the next shuffle, so cover chunks arriving later don't reorder the list
     if (state.sort === 'random') return a.r - b.r;
     return (b.pick ? 2 : 0) + (covers[b.id] ? 1 : 0) - ((a.pick ? 2 : 0) + (covers[a.id] ? 1 : 0)) || a.o - b.o;
@@ -387,6 +392,7 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
     var facts = [['平台', '<span class="g-' + g.p + '">' + plat[0] + '</span> ' + plat[1]]];
     if (g.g && g.g.length) facts.push(['类型', esc(g.g.join(' · '))]);
     if (g.l && g.l.length) facts.push(['语言', esc(g.l.join(' / '))]);
+    if (g.db) facts.push(['豆瓣评分', '<a class="dblink" href="' + esc(g.src && g.src.douban) + '" target="_blank" rel="noopener"><b>' + g.db.toFixed(1) + '</b></a> <span style="color:var(--muted)">' + g.dbn + ' 人评价</span>']);
     if (g.dev) facts.push(['开发', esc(g.dev)]);
     if (g.y) facts.push(['年份', g.y]);
     var tags = []; if (g.pick) tags.push('推荐'); if (g.commute) tags.push('适合通勤');
@@ -400,7 +406,7 @@ h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 18px 0
         (v.note ? '<div class="note">' + esc(v.note) + '</div>' : '') + '</div>';
     }).join('');
     var links = [];
-    if (g.src) Object.keys(g.src).forEach(function (k) { links.push('<a href="' + esc(g.src[k]) + '" target="_blank" rel="noopener">' + esc({ steam: 'Steam', wikiZh: '维基百科', wikiEn: 'Wikipedia', apk: 'APKPure', psm: 'PSM Reborn', lb: 'LaunchBox' }[k] || k) + '</a>'); });
+    if (g.src) Object.keys(g.src).forEach(function (k) { links.push('<a href="' + esc(g.src[k]) + '" target="_blank" rel="noopener">' + esc({ steam: 'Steam', wikiZh: '维基百科', wikiEn: 'Wikipedia', apk: 'APKPure', psm: 'PSM Reborn', lb: 'LaunchBox', douban: '豆瓣' }[k] || k) + '</a>'); });
     var nShots = (manifest && manifest.count[id]) || 0;
     var sheet = $('sheet');
     sheet.innerHTML =
